@@ -211,6 +211,11 @@ func (dao *CouchDBDAO) QueryDoc(doc IDoc) []byte {
 //		ddName： Is the Design Document ID's value,that without "_design/"
 //		viewName：Is the view name that without "_view/"
 //		queryString：查询参数；(key、startkey、endkey .et)
+//
+//		视图的查询结果模版为：{"total_rows":13,"offset":3,"rows":[{"id":"","key":"","value":{}]}
+//		rows := &couchdb.ResultRows{}
+//		rows.Rows = []map[string]interface{}{} //默认初始化，为nil，不为零值
+//		json.Unmarshal(bytes, rows)
 func (dao *CouchDBDAO) QueryView(dbName string, ddName string, viewName string, queryString string) []byte {
 	dbURLString := dao.COUCH_DB_HOST + dbName + "/"
 	ddURLString := dbURLString + "_design/" + ddName + "/"
