@@ -64,7 +64,7 @@ type UUIDs struct {
 }
 
 // Update后的单条，影响，结果状态行
-//		结果可用做的操作，包含如下：Insert
+//		结果可用做的操作，包含如下：Insert, Update, Delete
 type EffectRowResult struct {
 	OK  bool   `json:"ok"`
 	ID  string `json:"id"`
@@ -141,7 +141,7 @@ func (dao *CouchDBDAO) GetUUIDFromCouchDB(count uint8) []string {
 // 插入单条Document，返回CouchDB结果JSON的[]byte
 //
 // 文档的struct，不用设定ID字段，本方法会填充一个新的
-func (dao *CouchDBDAO) InsertDoc(doc IDoc) []byte {
+func (dao *CouchDBDAO) InsertDoc(doc IDoc) *EffectRowResult {
 	docBytes := doc.GetJSONBytes()
 	uuid := dao.GetUUIDFromCouchDB(1)[0]
 	dbWithNewIdURLString := dao.COUCH_DB_HOST + doc.GetDBName() + "/" + uuid
@@ -166,7 +166,14 @@ func (dao *CouchDBDAO) InsertDoc(doc IDoc) []byte {
 	if err != nil {
 		handleError(err, "从CouchDB请求创建新Doc,解码JSON部分错误。")
 	} else {
-		return bytes
+		effect := &EffectRowResult{}
+		err := json.Unmarshal(bytes, effect)
+		if err != nil {
+			handleError(err, "从CouchDB请求插入Doc,编码JSON bytes为EffectRowResult部分错误。")
+			return nil
+		} else {
+			return effect
+		}
 	}
 
 	return nil
@@ -253,6 +260,11 @@ func (dao *CouchDBDAO) QueryView(dbName string, ddName string, viewName string, 
 }
 
 // 更新文档，_rev必须存在;
+//
+//		bytes = dao.QueryView("dbname", "users", "keyIsName", `key="tsengyuen"`)
+//		rows := &couchdb.ResultRows{}
+//		rows.Rows = []map[string]interface{}{}
+//		json.Unmarshal(bytes, rows)
 func (dao *CouchDBDAO) UpdateDoc(doc IDoc) *EffectRowResult {
 	docBytes := doc.GetJSONBytes()
 	dbURLString := dao.COUCH_DB_HOST + doc.GetDBName() + "/"
@@ -295,6 +307,59 @@ func (dao *CouchDBDAO) UpdateDoc(doc IDoc) *EffectRowResult {
 		err := json.Unmarshal(bytes, effect)
 		if err != nil {
 			handleError(err, "从CouchDB请求更新Doc,编码JSON bytes为EffectRowResult部分错误。")
+			return nil
+		} else {
+			return effect
+		}
+
+		return nil
+	}
+}
+
+// 删除文档，_rev必须存在;
+//
+//		docUser := &DocUser{
+//			ID:  "123123123",
+//			Rev: "1-fe27a81c070c197c1382e82cbf9f44d1",
+//		}
+//		effectRowResult := dao.DeleteDoc(docUser)
+func (dao *CouchDBDAO) DeleteDoc(doc IDoc) *EffectRowResult {
+	dbURLString := dao.COUCH_DB_HOST + doc.GetDBName() + "/"
+	docURLString := dbURLString
+	if id := doc.GetID(); id != "" {
+		docURLString += id
+	}
+	docWithQueryStringRevURLString := docURLString
+	if rev := doc.GetRev(); rev != "" {
+		docWithQueryStringRevURLString += "?rev=" + rev
+	}
+	//
+	docWithQueryStringRevURL, _ := url.Parse(docWithQueryStringRevURLString)
+	r := http.Request{
+		Method: `DELETE`,
+		URL:    docWithQueryStringRevURL,
+		Header: map[string][]string{},
+		Close:  true,
+	}
+	if password, ok := r.URL.User.Password(); ok {
+		r.SetBasicAuth(r.URL.User.Username(), password)
+	}
+
+	c := http.Client{}
+	resp, err := c.Do(&r)
+	if err != nil {
+		handleError(err, "从CouchDB请求更新Doc,获取响应部分错误。")
+		return nil
+	}
+	bytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		handleError(err, "从CouchDB请求更新Doc,解码JSON部分错误。")
+		return nil
+	} else {
+		effect := &EffectRowResult{}
+		err := json.Unmarshal(bytes, effect)
+		if err != nil {
+			handleError(err, "从CouchDB请求删除Doc,编码JSON bytes为EffectRowResult部分错误。")
 			return nil
 		} else {
 			return effect
