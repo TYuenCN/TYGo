@@ -42,6 +42,11 @@ func (this *Router) Add(pattern string, handler http.Handler) {
 }
 
 func (this *Router) AddStatic(pattern string, realPath string) {
+	//this.staticPaths[pattern] = realPath
+	this.staticPaths[pattern] = filepath.Dir(os.Args[0]) + realPath
+}
+
+func (this *Router) AddStaticByAbsolutePath(pattern string, realPath string) {
 	this.staticPaths[pattern] = realPath
 }
 
@@ -50,8 +55,9 @@ func (this *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 将匹配到的模式（URL文件名外的前半截）用模式实际对应的真实路径替换，即为，文件真实路径。
 	for urlPattern, realPath := range this.staticPaths {
 		if isStaticRequest := strings.HasPrefix(r.URL.Path, urlPattern); isStaticRequest {
-			part4RealPath := strings.Replace(r.URL.Path, urlPattern, realPath, 1)
-			staticFileRealPath := filepath.Dir(os.Args[0]) + part4RealPath
+			//part4RealPath := strings.Replace(r.URL.Path, urlPattern, realPath, 1)
+			//staticFileRealPath := filepath.Dir(os.Args[0]) + part4RealPath
+			staticFileRealPath := strings.Replace(r.URL.Path, urlPattern, realPath, 1)
 			http.ServeFile(w, r, staticFileRealPath)
 			return
 		}

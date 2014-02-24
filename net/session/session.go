@@ -25,6 +25,9 @@ type Session struct {
 }
 
 func (session *Session) Set(key, value interface{}) error {
+	if session.values == nil {
+		session.values = map[interface{}]interface{}{}
+	}
 	session.values[key] = value
 
 	//Update LifeTime

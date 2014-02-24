@@ -18,7 +18,7 @@ package session
 
 import (
 	"fmt"
-	uuid "github.com/nu7hatch/gouuid"
+	"github.com/nu7hatch/uuid"
 	"net/http"
 	"net/url"
 	"sync"
@@ -102,6 +102,7 @@ func (manager *Manager) sessionStartWithURL(w http.ResponseWriter, r *http.Reque
 func (manager *Manager) sessionStartWithCookie(w http.ResponseWriter, r *http.Request) *Session {
 	var session *Session
 	sessionCookie, err := r.Cookie(manager.CookieName)
+
 	if err != nil || sessionCookie.Value == "" {
 		sid := manager.sessionID()
 		session = manager.SessionInit(sid)
